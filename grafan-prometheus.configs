@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -e
+
+# Author: Slobodan Milojevic
+# Description: Installs Prometheus and Grafana on Ubuntu
+
+PROMETHEUS_VERSION="2.52.0"
+NODE_EXPORTER_VERSION="1.8.0"
+
+echo Updating system..."
+sudo apt update && sudo apt upgrade -y
+
+echo  Installing dependencies..."
+sudo apt install -y wget curl tar ufw
+
+# --- Prometheus ---
+echo "[+] Creating Prometheus user..."
+sudo useradd --no-create-home --shell /usr/sbin/nologin prometheus || true
+
+echo  Creating Prometheus directories..."
+sudo mkdir -p /etc/prometheus /var/lib/prometheus
+sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
+
+echo  Downloading Prometheus $PROMETHEUS_VERSION..."
+cd /tmp
+wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+tar xvf prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+
+cd prometheus-${PROMETHEUS_VERSION}.linux-amd64
+sudo cp prometheus promtool /usr/local/bin/
+sudo cp -r consoles/ console_libraries/ /etc/prometheus
+sudo cp prometheus.yml /etc/prometheus/prometheus.yml
+sudo chown -R prometheus:prometheus /usr/local/bin/prometheus /usr/local/bin/promtool
+sudo chown -R prometheus:prometheus /etc/prometheus
+
+echo  Creating Prometheus systemd service..."
+cat <<EOF | sudo tee /etc/systemd/system/prometheus.service
+[Unit]
+Description=Prometheus Monitoring
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=prometheus
+ExecStart=/usr/local/bin/prometheus \\
+  --config.file=/etc/prometheus/prometheus.yml \\
+  --storage.tsdb.path=/var/lib/prometheus/ \\
+  --web.console.templates=/etc/prometheus/consoles \\
+  --web.console.libraries=/etc/prometheus/console_libraries
+
+[Install]
+WantedBy=default.target
+EOF
+
+# --- Node Exporter ---
+echo "[+] Downloading Node Exporter $NODE_EXPORTER_VERSION..."
+cd /tmp
+wget https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
+tar xvf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
+sudo cp node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64/node_exporter /usr/local/bin/
+sudo useradd --no-create-home --shell /usr/sbin/nologin nodeusr || true
+
+echo "[+] Creating Node Exporter systemd service..."
+cat <<EOF | sudo tee /etc/systemd/system/node_exporter.service
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=
