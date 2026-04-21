@@ -29,7 +29,7 @@ sudo chown prometheus:prometheus /etc/prometheus /var/lib/prometheus
 3.2 Binary Deployment
 Downloading and installing the Prometheus binaries from the official source.
 
-Bash
+
 cd /tmp
 wget [https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-2.48.0.linux-amd64.tar.gz](https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-2.48.0.linux-amd64.tar.gz)
 tar xvf prometheus-2.48.0.linux-amd64.tar.gz
